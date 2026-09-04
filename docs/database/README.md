@@ -20,10 +20,10 @@ export (`information_schema`/`pg_catalog`-derived table, column, constraint, ind
 - **Descriptions** are used verbatim from database comments where present. Where no comment exists, a
   concise description was **inferred** from the table/column name and is explicitly marked *(inferred)*
   in the tables below — these are best-effort guesses, not verified facts.
-- **Relationships**: the metadata contains only 2 declared `FOREIGN KEY` constraints across both schemas
-  (both in `public`). Several additional relationships are documented only in column comments (e.g.
+- **Relationships**: the metadata contains 4 declared `FOREIGN KEY` constraints across both schemas
+  (2 in `public`, 2 cross-schema in `idx_config`). Several additional relationships are documented only in column comments (e.g.
   `listing.source_id` → `source.id`); these are shown in each schema's ER diagram as dotted,
-  **unenforced** edges, clearly distinguished from the 2 constraint-enforced (solid) edges. No
+  **unenforced** edges, clearly distinguished from the 4 constraint-enforced (solid) edges. No
   relationship is asserted in this documentation beyond what is stated in a constraint or a comment.
 - Tables are grouped into categories (e.g. "Core Listing Data", "Temporary, Test, Backup & Scratch
   Tables") based on naming conventions, to make the large `public` schema (161 tables) navigable. This
@@ -31,8 +31,8 @@ export (`information_schema`/`pg_catalog`-derived table, column, constraint, ind
 
 ## Notable characteristics of this database
 
-- **Referential integrity is largely convention-based, not enforced.** Only 2 of 161 tables in `public`
-  have an actual `FOREIGN KEY` constraint. Most relational structure (e.g. `listing_status_id` →
+- **Referential integrity is largely convention-based, not enforced.** Only 4 foreign-key constraints exist across both schemas (2 in `public`, 2 cross-schema in `idx_config`). Of the 161 tables in `public`, only 2
+  have a `FOREIGN KEY` constraint. The `idx_config.listing_property_type` table references two `public`-schema lookup tables. Most relational structure (e.g. `listing_status_id` →
   `listing_status.id`) relies on application code and naming convention rather than the database
   guaranteeing consistency. Treat any relationship not listed as "Enforced: Yes" in a schema doc as
   informational only.

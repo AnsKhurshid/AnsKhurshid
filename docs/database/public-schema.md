@@ -240,7 +240,7 @@ _None._
 
 **Type:** BASE TABLE
 
-**Description:** Inferred from table/column naming; no table comment present in the source metadata. *(inferred)*
+**Description:** Core real-estate listing table: one row per MLS listing per source. Range-partitioned by source_status into child tables listing_p_active, listing_p_inactive, and listing_p_sold.
 
 **Columns**
 
@@ -13285,7 +13285,7 @@ _None._
 
 **Type:** BASE TABLE
 
-**Description:** Inferred from table/column naming; no table comment present in the source metadata. *(inferred)*
+**Description:** Stores listing changes which are eligible to trigger inclusion in bonded listing alerts for the persons bonded to them.
 
 **Columns**
 
@@ -15172,7 +15172,7 @@ _None._
 
 **Type:** BASE TABLE
 
-**Description:** Inferred from table/column naming; no table comment present in the source metadata. *(inferred)*
+**Description:** Per-listing quality/preference scoring used to influence ranking and display eligibility in search results; one row per listing.
 
 **Columns**
 
@@ -15746,7 +15746,7 @@ _None._
 
 **Type:** BASE TABLE
 
-**Description:** Inferred from table/column naming; no table comment present in the source metadata. *(inferred)*
+**Description:** MLS agents and offices (participants) imported per data source, linked to listings via listing_participant_rel. Roughly one row per participant per source.
 
 **Columns**
 
@@ -15982,7 +15982,7 @@ _None._
 
 **Type:** BASE TABLE
 
-**Description:** Inferred from table/column naming; no table comment present in the source metadata. *(inferred)*
+**Description:** Cache of geocoding provider responses, keyed by the exact address string and provider (unique), so repeated lookups for the same address reuse a stored result instead of re-querying the provider.
 
 **Columns**
 
@@ -16802,7 +16802,7 @@ _None._
 
 **Type:** BASE TABLE
 
-**Description:** Inferred from table/column naming; no table comment present in the source metadata. *(inferred)*
+**Description:** An MLS / IDX data source and its per-source ingestion, geocoding, photo-prefetch, and compliance-display configuration. E.g. ListHub, RMLS, CVRMLS.
 
 **Columns**
 
@@ -16881,7 +16881,7 @@ _None._
 
 **Type:** BASE TABLE
 
-**Description:** Inferred from table/column naming; no table comment present in the source metadata. *(inferred)*
+**Description:** Custom Area Mapping at Source Level.
 
 **Columns**
 
@@ -16995,7 +16995,7 @@ _None._
 
 **Type:** BASE TABLE
 
-**Description:** Do-Not-Call (DNC) compliance registry data used to suppress outbound contact to numbers on federal/state DNC lists. Inferred from naming convention; no table comment present. *(inferred)*
+**Description:** Do-Not-Call (DNC) registry keyed by phone number. Each jurisdiction column flags whether the number appears on that federal or state DNC list; dnc_registry_view exposes a computed is_dnc that is consulted before placing outbound calls/texts.
 
 **Columns**
 

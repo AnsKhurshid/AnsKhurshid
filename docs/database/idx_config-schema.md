@@ -2,8 +2,8 @@
 
 This schema holds small, mostly static **lookup/configuration tables** used to normalize and
 validate incoming MLS listing data during ingestion — for example, regular expressions used to validate MLS
-numbers, and standardized property-type and school-type code lists. It has no foreign-key relationships in the
-metadata; each table is a small, independent reference/config table keyed by a surrogate `id`.
+numbers, and standardized property-type and school-type code lists. The `listing_property_type` table has
+two cross-schema foreign-key constraints referencing `public` schema lookup tables.
 
 **Tables/Views documented:** 4
 
@@ -16,7 +16,35 @@ metadata; each table is a small, independent reference/config table keyed by a s
 
 Diagram of relationships found in this schema's metadata: solid edges are enforced by a `FOREIGN KEY` constraint; dotted edges are relationships documented only in column comments (no constraint enforces referential integrity for these).
 
-_No foreign-key relationships (declared or documented) were found for this schema in the source metadata._
+```mermaid
+erDiagram
+    idx_config_listing_property_type ||--o{ public_listing_property_type : "property_type_id → id"
+    idx_config_listing_property_type ||--o{ public_listing_property_sub_type : "property_sub_type_id → id"
+
+    idx_config_listing_property_type {
+        integer id PK
+        integer source_id
+        integer property_type_id FK
+        integer property_sub_type_id FK
+        text property_type
+        text property_sub_type
+    }
+
+    public_listing_property_type {
+        integer id PK
+    }
+
+    public_listing_property_sub_type {
+        integer id PK
+    }
+```
+
+### Relationship Summary
+
+| Source Table | Column | → Target Table | Target Column | Enforced | Notes |
+|---|---|---|---|---|---|
+| `idx_config.listing_property_type` | `property_type_id` | `public.listing_property_type` | `id` | Yes (FK constraint) | Cross-schema reference |
+| `idx_config.listing_property_type` | `property_sub_type_id` | `public.listing_property_sub_type` | `id` | Yes (FK constraint) | Cross-schema reference |
 
 ## Tables
 
@@ -62,6 +90,8 @@ _No foreign-key relationships (declared or documented) were found for this schem
 **Constraints**
 
 - **Primary Key:** `id`
+- **Foreign Key:** `property_type_id` → `public.listing_property_type(id)`
+- **Foreign Key:** `property_sub_type_id` → `public.listing_property_sub_type(id)`
 
 **Indexes**
 
