@@ -12,8 +12,7 @@ Comprehensive technical documentation for the **MLS (Multiple Listing Service) R
 | [`etl`](etl-schema.md) | 6 | ETL mapping engine — source-to-target column mappings, join conditions, Slack alerting | [Full Reference](etl-schema.md) |
 | [`idx_config`](idx_config-schema.md) | 3 | IDX configuration — property type classification, school type normalization, MLS number regex | [Full Reference](idx_config-schema.md) |
 | [`public`](public-schema.md) | 16 | Core listing data — listings, photos, open houses, agents, offices, property types, statuses | [Full Reference](public-schema.md) |
-
-> **Note:** The `idx_stage` schema (staging tables for raw MLS data ingestion) is not yet included. Documentation will be added when metadata becomes available.
+| [`idx_stage`](idx_stage-schema.md) | Hundreds | Pre-staging raw data — one all-text table per source/resource (`ps_{type}_{resource}_{source_id}`) | [Full Reference](idx_stage-schema.md) |
 
 ---
 
@@ -21,8 +20,8 @@ Comprehensive technical documentation for the **MLS (Multiple Listing Service) R
 
 | Metric | Value |
 |--------|-------|
-| Total Schemas | 4 (documented) + 1 (pending) |
-| Total Tables | 36 |
+| Total Schemas | 5 |
+| Total Tables | 36 + hundreds (idx_stage) |
 | Total Sequences | 25 |
 | Foreign Key Constraints | 0 |
 | Table Comments | 0 |
@@ -36,7 +35,7 @@ The MLS database follows a **multi-stage ETL pipeline** architecture:
 
 1. **Source Registration** (`dev.source`) — MLS data sources are registered with authentication and configuration
 2. **Metadata Discovery** (`dev.*_metadata`) — Resource, class, and field definitions are cataloged from each MLS source
-3. **Staging** (`idx_stage.*`) — Raw MLS data is staged before transformation
+3. **Pre-Staging** (`idx_stage.*`) — Raw MLS data is downloaded into all-text tables (`ps_{type}_{resource}_{source_id}`)
 4. **Transformation** (`etl.mappings`, `etl.mapping_joins`) — Source columns are mapped to target columns with business transformations
 5. **Loading** (`public.listing`, etc.) — Normalized data is loaded into the public schema for consumption
 6. **Configuration** (`idx_config.*`) — Property type classification, school type normalization, and MLS number formatting rules

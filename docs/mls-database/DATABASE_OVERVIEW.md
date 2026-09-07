@@ -18,7 +18,7 @@ The system ingests data from ~34 MLS sources, processes field-level metadata for
 |--------|-------|
 | PostgreSQL Engine | Amazon RDS |
 | Schemas | 5 (`dev`, `etl`, `idx_config`, `public`, `idx_stage`) |
-| Tables | 36 (across 4 documented schemas) |
+| Tables | 36 (named) + hundreds of pre-staging tables (`idx_stage`) |
 | Sequences | 25 |
 | Foreign Key Constraints | 0 |
 | Table/Column Comments | 0 |
@@ -44,9 +44,11 @@ MLS Sources (RETS/Web API)
 └────────┬────────────┘
          │
          ▼
-┌─────────────────────┐
-│   idx_stage.*       │  ← Raw Data Staging (per-source staging tables)
-└────────┬────────────┘
+┌──────────────────────────────────────────────────────┐
+│   idx_stage.*                                        │  ← Pre-Staging
+│   ps_{source_type}_{resource_name}_{source_id}       │     (all text columns)
+│   ps_rets_{resource_name}_{source_id}                │     (one table per source/resource)
+└────────────────────────┬─────────────────────────────┘
          │
          ▼
 ┌─────────────────────┐
@@ -72,7 +74,7 @@ MLS Sources (RETS/Web API)
 
 2. **Metadata Discovery** — The system downloads resource, class, and field definitions from each MLS source. Raw metadata is staged in `dev.stage_*_metadata` tables before being promoted to production `dev.*_metadata` tables after validation.
 
-3. **Data Staging** — Raw listing data from MLS feeds is staged in `idx_stage` schema tables (one table per source/resource combination). This staging layer buffers incoming data before transformation.
+3. **Pre-Staging** — Raw data is downloaded from MLS sources into `idx_stage` pre-staging tables. Each source/resource combination gets its own table following the naming convention `ps_{source_type}_{resource_name}_{source_id}` (for APIs) or `ps_rets_{resource_name}_{source_id}` (for RETS). All columns use the `text` data type to prevent type-casting failures during download — transformation happens later.
 
 4. **Transformation** — The `etl.mappings` table defines 355K+ source-to-target column mappings with optional SQL business transformations. `etl.mapping_joins` provides JOIN conditions for multi-table source queries.
 
@@ -155,9 +157,27 @@ The `public` schema is the **end-product** of the ETL pipeline — normalized, q
 
 **Key Design Pattern:** Multi-Source Isolation — every table carries `source_id` and `batch_id`, enabling per-MLS-source data isolation within shared tables.
 
-### 3.5 idx_stage Schema — Data Staging (pending)
+### 3.5 idx_stage Schema — Pre-Staging Raw Data (hundreds of tables)
 
-The `idx_stage` schema contains **raw staging tables** for MLS data ingestion. Its metadata (~47MB) suggests a large number of tables, likely one per MLS source/resource combination. Documentation will be added when metadata is available.
+The `idx_stage` schema is the **first landing zone** for MLS data. It contains hundreds of pre-staging tables — one per source/resource combination — that hold raw data exactly as downloaded from MLS sources.
+
+**Naming Convention:**
+- API sources: `ps_{source_type}_{resource_name}_{source_id}` (e.g., `ps_api_property_205`)
+- RETS sources: `ps_rets_{resource_name}_{source_id}` (e.g., `ps_rets_property_101`)
+
+**Key Design Decisions:**
+- **All columns are `text`** — No type casting during download; raw data is preserved with source fidelity
+- **One table per source/resource** — Provides isolation between sources, supports independent column sets, and enables parallel loading
+- **Convention-based naming** — Source type, resource, and source ID are encoded in the table name itself
+
+**Data Flow:**
+1. ETL scheduler creates download tasks in `dev.to_do`
+2. Raw data is downloaded from MLS via RETS or Web API
+3. Records land in the corresponding `ps_*` table as text
+4. `etl.mappings` defines how each column transforms into `public.*` typed columns
+5. Transformed data moves to `public.listing`, `real_estate_participant`, etc.
+
+The 47MB metadata file size reflects the large number of tables, each with potentially hundreds of text columns matching the MLS field definitions from `dev.field_metadata`.
 
 ---
 
@@ -190,8 +210,8 @@ erDiagram
 
 | Source Schema | Target Schema | Relationship |
 |---------------|---------------|--------------|
-| `dev` → `idx_stage` | `source_id`, `resource_name` drive staging table selection |
-| `etl` → `public` | `mappings` define how staging data transforms into `public` tables |
+| `dev` → `idx_stage` | `source_id` and `resource_name` determine the `ps_*` table name |
+| `idx_stage` → `public` | `etl.mappings.source_table` references `ps_*` tables; transformations produce `public.*` rows |
 | `idx_config` → `public` | Property type rules applied to `listing_property_type_search` |
 | `dev` → `etl` | `source_id` links metadata to transformation rules |
 
@@ -315,7 +335,7 @@ These suggest tables that were removed during schema evolution but whose sequenc
 |--------|-------------|---------------|
 | Purpose | ETL pipeline & data ingestion | Downstream serving & search |
 | Schemas | 5 | 2 (public, idx_config) |
-| Tables | 36+ | 165 |
+| Tables | 36 + hundreds (idx_stage) | 165 |
 | FK Constraints | 0 | 4 |
 | Table Comments | 0 | 8 |
 | Listing Table | 67 columns, no PK | 1,596 columns (wide), partitioned |
