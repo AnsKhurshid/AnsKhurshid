@@ -8,7 +8,7 @@
 
 ## 1. Executive Summary
 
-The MLS (Multiple Listing Service) database is a PostgreSQL RDS instance that serves as the **central data hub** for ingesting, transforming, and serving real estate listing data from multiple MLS sources. The database implements a multi-stage ETL pipeline architecture across 5 schemas and 36+ tables.
+The MLS (Multiple Listing Service) database is a PostgreSQL RDS instance that serves as the **central data hub** for ingesting, transforming, and serving real estate listing data from multiple MLS sources. The database implements a multi-stage ETL pipeline architecture across 6 schemas and 94+ tables.
 
 The system ingests data from ~34 MLS sources, processes field-level metadata for over 6 million field definitions, maps 355,000+ source-to-target column transformations, and maintains nearly 3 million real estate agent records alongside listing data from across the country.
 
@@ -17,10 +17,10 @@ The system ingests data from ~34 MLS sources, processes field-level metadata for
 | Metric | Value |
 |--------|-------|
 | PostgreSQL Engine | Amazon RDS |
-| Schemas | 5 (`dev`, `etl`, `idx_config`, `public`, `idx_stage`) |
-| Tables | 36 (named) + hundreds of pre-staging tables (`idx_stage`) |
-| Sequences | 25 |
-| Foreign Key Constraints | 0 |
+| Schemas | 6 (`dev`, `etl`, `idx_config`, `public`, `stage`, `idx_stage`) |
+| Tables | 94 (named) + hundreds of pre-staging tables (`idx_stage`) |
+| Sequences | 58 |
+| Foreign Key Constraints | 3 (within `stage.app_*` tables) |
 | Table/Column Comments | 0 |
 | MLS Sources | ~34 |
 | Agent Records | ~2.9M |
@@ -32,7 +32,7 @@ The system ingests data from ~34 MLS sources, processes field-level metadata for
 
 ## 2. Architecture Overview
 
-The database follows a **multi-stage ETL pipeline** pattern with clear separation of concerns across its 5 schemas:
+The database follows a **multi-stage ETL pipeline** pattern with clear separation of concerns across its 6 schemas:
 
 ```
 MLS Sources (RETS/Web API)
@@ -57,6 +57,14 @@ MLS Sources (RETS/Web API)
 └────────┬────────────┘
          │
          ▼
+┌──────────────────────────────────────────────────────┐
+│   stage.*                                            │  ← Post-Transformation Staging
+│   direct_idx_listing, direct_idx_address, ...        │     (typed, normalized tables)
+│   etl_direct_idx_insert/update/delete_listings       │     (change-detection queues)
+│   app_* (mapping recommendation application)         │     (automated mapping engine)
+└────────────────────────┬─────────────────────────────┘
+         │
+         ▼
 ┌─────────────────────┐
 │   public.listing    │  ← Normalized Listing Data
 │   public.*          │  ← Agents, Offices, Photos, Open Houses
@@ -78,9 +86,11 @@ MLS Sources (RETS/Web API)
 
 4. **Transformation** — The `etl.mappings` table defines 355K+ source-to-target column mappings with optional SQL business transformations. `etl.mapping_joins` provides JOIN conditions for multi-table source queries.
 
-5. **Loading** — Transformed data is loaded into the normalized `public` schema tables (`listing`, `listing_photo`, `listing_openhouse`, `real_estate_participant`, `real_estate_office`, etc.).
+5. **Post-Transformation Staging** — Transformed, typed data lands in the `stage` schema's Direct IDX pipeline tables (`direct_idx_listing`, `direct_idx_address`, `direct_idx_agent`, etc.). Change-detection queues (`etl_direct_idx_insert/update/delete_listings`) determine which records need to be promoted to the public schema. The schema also houses an automated mapping recommendation application (`app_*` tables).
 
-6. **Configuration** — The `idx_config` schema provides property type classification rules, school type normalization, and MLS number formatting regex patterns that are applied during and after the ETL process.
+6. **Loading** — Data is promoted from `stage.direct_idx_*` tables into the normalized `public` schema tables (`listing`, `listing_photo`, `listing_openhouse`, `real_estate_participant`, `real_estate_office`, etc.).
+
+7. **Configuration** — The `idx_config` schema provides property type classification rules, school type normalization, and MLS number formatting regex patterns that are applied during and after the ETL process.
 
 ---
 
@@ -157,7 +167,26 @@ The `public` schema is the **end-product** of the ETL pipeline — normalized, q
 
 **Key Design Pattern:** Multi-Source Isolation — every table carries `source_id` and `batch_id`, enabling per-MLS-source data isolation within shared tables.
 
-### 3.5 idx_stage Schema — Pre-Staging Raw Data (hundreds of tables)
+### 3.5 stage Schema — Post-Transformation Staging (58 tables)
+
+The `stage` schema is the **post-transformation staging layer** — it receives typed, normalized data after ETL transformation and stages it for promotion to `public`.
+
+| Table Group | Tables | Purpose | Key Tables |
+|-------------|--------|---------|------------|
+| Direct IDX Pipeline | 14 | Normalized listing entities | `direct_idx_listing` (66 cols, ~20M rows), `direct_idx_photo` (~496M), `direct_idx_agent` (~104M) |
+| Attribute Tables | 8 | Property features (1,200–1,600 cols each) | `direct_idx_attribute_2` (~54M), `direct_idx_attribute_custom_2` (~4.8M) |
+| ETL Action Queues | 8 | Change detection & action tracking | `etl_direct_idx_insert_listings` (~7.9M), `etl_actions_log` (~3.7M) |
+| Mapping App | 12 | Automated mapping recommendations | `app_users`, `app_jobs`, `app_results`, `app_transformation_templates` |
+| Data Normalization | 5 | Area/status normalization, lookups | `listing_lookup` (~3.1M), `area_normalize` (~350K) |
+| Backups | 7+ | Point-in-time mapping snapshots | `mappings_838`, `mapptings_bkp_*` (typo in names) |
+
+**Key Design Patterns:**
+- **Vertically-Partitioned Entities** — Listing data is split across domain-specific tables (`listing`, `address`, `agent`, `photo`, etc.) linked by `source_listing_id`
+- **Change-Detection Queues** — `etl_direct_idx_insert/update/delete_listings` implement queue-based CDC before promoting to `public`
+- **Application-in-Database** — The `app_*` tables form a complete web app backend with user auth, Jira integration, and ML-assisted mapping recommendations
+- **Version-Suffixed Tables** — Attribute tables (`_2`, `_3`, `_custom_2`, etc.) represent schema evolution
+
+### 3.6 idx_stage Schema — Pre-Staging Raw Data (hundreds of tables)
 
 The `idx_stage` schema is the **first landing zone** for MLS data. It contains hundreds of pre-staging tables — one per source/resource combination — that hold raw data exactly as downloaded from MLS sources.
 
@@ -211,9 +240,11 @@ erDiagram
 | Source Schema | Target Schema | Relationship |
 |---------------|---------------|--------------|
 | `dev` → `idx_stage` | `source_id` and `resource_name` determine the `ps_*` table name |
-| `idx_stage` → `public` | `etl.mappings.source_table` references `ps_*` tables; transformations produce `public.*` rows |
+| `idx_stage` → `stage` | `etl.mappings` transforms `ps_*` text data into typed `stage.direct_idx_*` tables |
+| `stage` → `public` | Change-detection queues promote staged data into `public.listing`, etc. |
 | `idx_config` → `public` | Property type rules applied to `listing_property_type_search` |
 | `dev` → `etl` | `source_id` links metadata to transformation rules |
+| `stage.app_*` → `etl` | Mapping recommendations feed back into `etl.mappings` definitions |
 
 ---
 
@@ -221,7 +252,7 @@ erDiagram
 
 ### 5.1 Convention-Based Referential Integrity
 
-The database has **zero foreign key constraints**. This is a deliberate design choice for ETL workloads:
+The database has **only 3 foreign key constraints** (all within the `stage.app_*` application tables). The ETL pipeline tables have zero FK constraints — a deliberate design choice for ETL workloads:
 
 - **Bulk load performance** — FK checks on every INSERT/UPDATE add significant overhead during batch loading
 - **Source ordering** — MLS data arrives in unpredictable order; FKs would require loading reference data first
@@ -231,15 +262,20 @@ The trade-off is that data integrity depends entirely on the ETL pipeline logic.
 
 ### 5.2 Missing Primary Keys
 
-Five tables lack primary key constraints:
+Fifteen tables across the database lack primary key constraints:
 
-| Table | Logical Key | Risk |
-|-------|-------------|------|
-| `listing` | `source_id` + `source_listing_id` | Duplicate listings possible |
-| `listing_status` | `id` (nullable) | No uniqueness guarantee |
-| `listing_openhouse` | `id` (has sequence) | No uniqueness guarantee |
-| `listing_photo` | `id` (exists, not constrained) | No uniqueness guarantee |
-| `mls_board` | `id` (nullable) | No uniqueness guarantee |
+| Schema | Table | Logical Key | Risk |
+|--------|-------|-------------|------|
+| `public` | `listing` | `source_id` + `source_listing_id` | Duplicate listings possible |
+| `public` | `listing_status` | `id` (nullable) | No uniqueness guarantee |
+| `public` | `listing_openhouse` | `id` (has sequence) | No uniqueness guarantee |
+| `public` | `listing_photo` | `id` (exists, not constrained) | No uniqueness guarantee |
+| `public` | `mls_board` | `id` (nullable) | No uniqueness guarantee |
+| `stage` | `direct_idx_attribute` | `id` (exists, unconstrained) | 1,600-column table without PK |
+| `stage` | `direct_idx_attribute_custom` | `id` (exists, unconstrained) | 1,592-column table without PK |
+| `stage` | `mappings` / `mappings_838` | — | Backup copies, no constraints |
+| `stage` | `mapping_joins` / `mapping_joins_838` | — | Backup copies, no constraints |
+| `stage` | `mapptings_bkp_*` (4 tables) | — | Point-in-time backups |
 
 The `listing` table is the most significant case — it has 25 indexes but no PK. The composite index on `(source_id, source_listing_id)` serves as the logical key but is not unique.
 
@@ -280,15 +316,23 @@ The `'simple'` text search configuration provides accent-insensitive, stemming-f
 
 ### 6.1 Scale Indicators
 
-| Table | Estimated Rows | Growth Driver |
-|-------|---------------|---------------|
-| `stage_field_metadata` | 6,013,635 | New MLS sources + field discovery |
-| `field_metadata` | 3,774,159 | Promoted field definitions |
-| `real_estate_participant` | 2,941,961 | Agent records across all sources |
-| `real_estate_office` | 1,145,602 | Office records across all sources |
-| `mappings` | 355,283 | Column mapping definitions |
-| `stage_class_metadata` | 65,080 | Class discovery staging |
-| `class_metadata` | 18,854 | Promoted class definitions |
+| Table | Schema | Estimated Rows | Growth Driver |
+|-------|--------|---------------|---------------|
+| `direct_idx_office` | stage | ~690M (sequence) | Office records per listing/source |
+| `direct_idx_photo` | stage | ~496M (sequence) | Photo records across all sources |
+| `direct_idx_agent` | stage | ~104M (sequence) | Agent records per listing role |
+| `direct_idx_attribute_2` | stage | ~54M | Property boolean attributes |
+| `direct_idx_school` | stage | ~45M | School assignments per listing |
+| `direct_idx_description` | stage | ~39M | Listing description key-value pairs |
+| `direct_idx_listing` | stage | ~20M | Core listing staging records |
+| `direct_idx_address` | stage | ~19.5M | Address records |
+| `stage_field_metadata` | dev | 6,013,635 | New MLS sources + field discovery |
+| `etl_actions_log` | stage | ~3.7M | ETL action audit trail |
+| `field_metadata` | dev | 3,774,159 | Promoted field definitions |
+| `listing_lookup` | stage | ~3.1M | Fast listing lookups |
+| `real_estate_participant` | public | 2,941,961 | Agent records across all sources |
+| `real_estate_office` | public | 1,145,602 | Office records across all sources |
+| `mappings` | etl | 355,283 | Column mapping definitions |
 
 ### 6.2 Index Strategy
 
@@ -323,9 +367,11 @@ These suggest tables that were removed during schema evolution but whose sequenc
 ## 7. Security Considerations
 
 - **Credentials in database:** `dev.to_do` stores MLS login URLs, usernames, and passwords in plain text. These should be migrated to a secrets manager.
+- **Jira tokens in database:** `stage.app_users` stores encrypted Jira OAuth and API tokens (`*_cipher` columns). Encryption key management and rotation are critical.
 - **No row-level security:** All data is accessible to any database user with schema access.
 - **No encryption at column level:** PII (agent emails, phone numbers, names) is stored in plain text.
 - **IDX compliance fields** are present but enforcement depends on application-layer logic.
+- **Web app session data:** `stage.app_sessions` stores Express session data in JSON — session secrets must be managed securely.
 
 ---
 
@@ -334,9 +380,9 @@ These suggest tables that were removed during schema evolution but whose sequenc
 | Aspect | MLS Database | HomelistingDB |
 |--------|-------------|---------------|
 | Purpose | ETL pipeline & data ingestion | Downstream serving & search |
-| Schemas | 5 | 2 (public, idx_config) |
-| Tables | 36 + hundreds (idx_stage) | 165 |
-| FK Constraints | 0 | 4 |
+| Schemas | 6 | 2 (public, idx_config) |
+| Tables | 94 + hundreds (idx_stage) | 165 |
+| FK Constraints | 3 | 4 |
 | Table Comments | 0 | 8 |
 | Listing Table | 67 columns, no PK | 1,596 columns (wide), partitioned |
 | Agent Records | ~2.9M | — |
@@ -351,13 +397,16 @@ The MLS database feeds data **upstream** into HomelistingDB — it is the ingest
 
 ### Issues
 
-1. **Zero foreign key constraints** — All referential integrity is convention-based
-2. **Five tables without primary keys** — Including the central `listing` table
+1. **Minimal foreign key constraints** — Only 3 FKs (within `stage.app_*`); all ETL referential integrity is convention-based
+2. **Fifteen tables without primary keys** — Including the central `public.listing` and ultra-wide `stage.direct_idx_attribute` tables
 3. **Credentials stored in plain text** — `dev.to_do` has username/password columns
-4. **Column name typo** — `etl.slack_alerts.slack_channal` should be `slack_channel`
-5. **Orphaned sequences** — 3 sequences in public schema have no owning table
-6. **No table or column comments** — Zero `pg_description` entries across the entire database
-7. **Backup tables without constraints** — `mappings_backup*` tables have no PKs or indexes
+4. **Column name typos** — `etl.slack_alerts.slack_channal` (should be `channel`), `stage.area_normalize.orignal_community/orignal_subdivision` (should be `original`)
+5. **Table name typos** — `stage.mapptings_bkp_*` (double "p"), `stage.mappting_joins_bkp_*`
+6. **Orphaned sequences** — 3 in public schema, 1 in stage (`direct_idx_openhouse_sync_id_seq`)
+7. **No table or column comments** — Zero `pg_description` entries across the entire database
+8. **Ultra-wide attribute tables** — `stage.direct_idx_attribute*` tables with 1,200–1,600 columns impact query planning and maintenance
+9. **Jira credentials in database** — `stage.app_users` stores encrypted Jira tokens; encryption key management is critical
+10. **Backup table accumulation** — Multiple dated backups in `stage` suggest manual rather than automated versioning
 
 ### Recommendations
 
@@ -410,3 +459,61 @@ The MLS database feeds data **upstream** into HomelistingDB — it is the ingest
 | 33 | public | idx_listing_etl_action_pool | 7 | id | 1 |
 | 34 | public | processed_files | 2 | file_name | 1 |
 | 35 | public | sales | 3 | id | 1 |
+| 36 | stage | direct_idx_listing | 66 | id | 5 |
+| 37 | stage | direct_idx_address | 38 | id | 4 |
+| 38 | stage | direct_idx_agent | 23 | id | 4 |
+| 39 | stage | direct_idx_photo | 13 | id | 4 |
+| 40 | stage | direct_idx_office | 28 | id | 4 |
+| 41 | stage | direct_idx_broker | 19 | id | 4 |
+| 42 | stage | direct_idx_description | 10 | id | 4 |
+| 43 | stage | direct_idx_school | 11 | id | 4 |
+| 44 | stage | direct_idx_openhouse | 19 | id | 4 |
+| 45 | stage | direct_idx_openhouse_sync | 9 | id | 4 |
+| 46 | stage | direct_idx_photo_mlsgrid | 13 | id | 4 |
+| 47 | stage | direct_idx_id | 6 | id | 3 |
+| 48 | stage | direct_esar_listing | 372 | id | 1 |
+| 49 | stage | direct_idx_attribute | 1,600 | — | 0 |
+| 50 | stage | direct_idx_attribute_2 | 1,539 | id | 2 |
+| 51 | stage | direct_idx_attribute_3 | 1,512 | id | 3 |
+| 52 | stage | direct_idx_attribute_custom | 1,592 | — | 0 |
+| 53 | stage | direct_idx_attribute_custom_2 | 1,449 | id | 4 |
+| 54 | stage | direct_idx_attribute_custom_3 | 1,456 | id | 4 |
+| 55 | stage | direct_idx_attribute_custom_4 | 1,215 | id | 4 |
+| 56 | stage | etl_direct_idx_insert_listings | 7 | id | 2 |
+| 57 | stage | etl_direct_idx_update_listings | 6 | id | 1 |
+| 58 | stage | etl_direct_idx_delete_listings | 10 | id | 1 |
+| 59 | stage | etl_direct_idx_missing_delete_listings | 6 | id | 1 |
+| 60 | stage | etl_actions_log | 8 | id | 1 |
+| 61 | stage | etl_action_mlsgrid_photos | 14 | id | 1 |
+| 62 | stage | etl_action_mlsgrid_photos_history | 14 | id | 1 |
+| 63 | stage | etl_mlsgrid_photos_temp | 10 | id | 1 |
+| 64 | stage | app_users | 18 | id | 2 |
+| 65 | stage | app_jobs | 11 | id | 2 |
+| 66 | stage | app_results | 10 | id | 2 |
+| 67 | stage | app_mapping_document | 8 | id | 1 |
+| 68 | stage | app_sessions | 3 | sid | 2 |
+| 69 | stage | app_transformation_templates | 6 | template_hash | 1 |
+| 70 | stage | app_transformation_index | 5 | composite | 1 |
+| 71 | stage | app_composition_rules | 10 | rule_id | 1 |
+| 72 | stage | app_suggestion_weights | 3 | factor | 1 |
+| 73 | stage | app_suggestion_overrides | 6 | id | 1 |
+| 74 | stage | app_target_column_families | 4 | target_column | 1 |
+| 75 | stage | app_template_extensions | 3 | composite | 1 |
+| 76 | stage | area_mapping | 10 | id | 1 |
+| 77 | stage | area_normalize | 17 | id | 2 |
+| 78 | stage | listing_lookup | 16 | id | 1 |
+| 79 | stage | ylopo_status_mapping | 3 | id | 1 |
+| 80 | stage | respecs_before_counts | 10 | id | 4 |
+| 81 | stage | respecs_after_counts | 10 | id | 3 |
+| 82 | stage | serverless_idx_loads | 13 | id | 1 |
+| 83 | stage | system_idx_resource_load | 5 | id | 1 |
+| 84 | stage | temp_listhub2_listings_update | 70 | id | 27 |
+| 85 | stage | mappings | 12 | — | 0 |
+| 86 | stage | mappings_838 | 13 | — | 0 |
+| 87 | stage | mapping_joins | 4 | — | 0 |
+| 88 | stage | mapping_joins_838 | 5 | — | 0 |
+| 89 | stage | mapptings_bkp_20_dec_2023 | 13 | — | 0 |
+| 90 | stage | mapptings_bkp_21_dec_2023 | 13 | — | 0 |
+| 91 | stage | mappting_joins_bkp_20_dec_2023 | 5 | — | 0 |
+| 92 | stage | mappting_joins_bkp_21_dec_2023 | 5 | — | 0 |
+| 93 | stage | direct_idx_attribute_custom_01_19_2026_bkp | 1,592 | — | 0 |
