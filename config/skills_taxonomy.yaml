@@ -47,7 +47,7 @@ skills:
 
   # ---------------------------------------------------------------- AWS
   AWS: {category: cloud, aliases: [amazon web services, aws cloud], equivalent: [Azure, GCP]}
-  AWS Lambda: {category: cloud, aliases: [lambda functions, "aws lambda", "lambda function", serverless functions], implies: [AWS, Serverless], equivalent: [Azure Functions, Google Cloud Functions]}
+  AWS Lambda: {category: cloud, aliases: [lambda, lambda functions, "aws lambda", "lambda function", serverless functions], implies: [AWS, Serverless], equivalent: [Azure Functions, Google Cloud Functions]}
   AWS Step Functions: {category: orchestration, aliases: [step functions, step function, "aws step function", sfn], implies: [AWS, Workflow Orchestration], related: [Apache Airflow, Azure Data Factory]}
   Amazon S3: {category: cloud, aliases: [s3, aws s3, "s3 buckets"], implies: [AWS], equivalent: [Azure Blob Storage, Google Cloud Storage]}
   AWS Glue: {category: processing, aliases: [glue jobs, glue catalog, "aws glue"], implies: [AWS, ETL], related: [AWS Lambda, Apache Spark, Azure Data Factory]}

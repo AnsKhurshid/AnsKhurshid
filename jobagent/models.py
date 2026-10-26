@@ -195,6 +195,8 @@ class MatchResult(BaseModel):
     location_eligibility: str = ""
     reasons_to_apply: list[str] = Field(default_factory=list)
     reasons_not_to_apply: list[str] = Field(default_factory=list)
+    raw_score: float | None = None          # weighted sum before adjustments
+    adjustments: list[str] = Field(default_factory=list)
     recommendation: Literal["apply", "consider", "stretch", "skip", "review_eligibility", "needs_details"]
     explanation: str = ""
     ai_used: bool = False

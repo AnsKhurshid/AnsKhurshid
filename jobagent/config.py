@@ -94,6 +94,7 @@ class MatchingSettings(BaseModel):
     weights: Weights = Field(default_factory=Weights)
     categories: Categories = Field(default_factory=Categories)
     use_ai: bool = True
+    off_target_role_threshold: float = 0.6   # role-alignment below this scales the score down
     candidate_domains: list[str] = Field(default_factory=list)
 
 
@@ -110,13 +111,15 @@ class ReportingSettings(BaseModel):
 
 
 class AISettings(BaseModel):
-    provider: Literal["none", "anthropic", "openai"] = "none"
-    model: str = ""
-    max_tokens: int = 2000
-    timeout_seconds: float = 60
-    max_retries: int = 3
-    input_cost_per_mtok: float = 0
-    output_cost_per_mtok: float = 0
+    provider: Literal["none", "anthropic"] = "none"
+    model: str = "claude-opus-5-5"
+    effort: Literal["low", "medium", "high", "xhigh", "max"] = "medium"
+    refusal_fallback: bool = True      # server-side fallback model if a request is declined
+    max_tokens: int = 16000
+    timeout_seconds: float = 120
+    max_retries: int = 2               # SDK-level retries for 429/5xx/connection errors
+    input_cost_per_mtok: float = 4.0   # USD, for cost estimates only
+    output_cost_per_mtok: float = 20.0
 
     @field_validator("model")
     @classmethod
@@ -153,7 +156,7 @@ class Settings(BaseModel):
 
     def api_key(self) -> str | None:
         """Return the key for the configured provider from the environment (never from YAML)."""
-        var = {"anthropic": "ANTHROPIC_API_KEY", "openai": "OPENAI_API_KEY"}.get(self.ai.provider)
+        var = {"anthropic": "ANTHROPIC_API_KEY"}.get(self.ai.provider)
         return (os.environ.get(var) or None) if var else None
 
 
