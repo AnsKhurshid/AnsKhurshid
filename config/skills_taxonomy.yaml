@@ -1,0 +1,128 @@
+# Canonical skills used for matching. Edit freely.
+#   aliases:     alternative spellings / synonyms (matched case-insensitively on word boundaries)
+#   case_sensitive_aliases: short tokens that are only meaningful in a given case (e.g. "R")
+#   implies:     broader skills this one demonstrates (AWS Lambda => AWS). Full credit for the broader skill.
+#   equivalent:  near-substitutes; partial credit (default 0.7) as a transferable skill
+#   related:     adjacent skills; small partial credit (default 0.35) as a transferable skill
+#   context_only: true = never matched unless written exactly (avoids false positives)
+
+credit:
+  equivalent: 0.7
+  related: 0.35
+
+skills:
+  # ---------------------------------------------------------------- languages
+  Python: {category: language, aliases: [python3, "python 3"]}
+  SQL: {category: language, aliases: ["structured query language", "t-sql", tsql, "pl/sql", plsql, "ansi sql"]}
+  Scala: {category: language, related: [Java, Python]}
+  Java: {category: language, related: [Scala]}
+  Bash: {category: language, aliases: [shell scripting, "shell script", "unix shell", "linux shell"]}
+  R: {category: language, case_sensitive_aliases: ["R"], context_only: true}
+  Go: {category: language, aliases: [golang], context_only: true}
+
+  # ---------------------------------------------------------------- databases
+  PostgreSQL: {category: database, aliases: [postgres, postgresql, psql], implies: [SQL, Relational Databases], equivalent: [MySQL, Microsoft SQL Server, Amazon Aurora], related: [Amazon Redshift]}
+  MySQL: {category: database, aliases: [mariadb], implies: [SQL, Relational Databases], equivalent: [PostgreSQL, Microsoft SQL Server]}
+  Microsoft SQL Server: {category: database, aliases: [sql server, mssql, ms sql, "ms-sql"], implies: [SQL, Relational Databases], equivalent: [PostgreSQL, MySQL]}
+  Oracle Database: {category: database, aliases: [oracle db, "oracle database"], implies: [SQL, Relational Databases], equivalent: [PostgreSQL, Microsoft SQL Server]}
+  Amazon RDS: {category: cloud, aliases: [aws rds, rds], implies: [AWS, Relational Databases]}
+  Amazon Aurora: {category: cloud, aliases: [aurora], implies: [AWS, Relational Databases], equivalent: [PostgreSQL, MySQL]}
+  Relational Databases: {category: concept, aliases: [rdbms, relational database, relational databases]}
+  MongoDB: {category: database, aliases: [mongo], implies: [NoSQL]}
+  Amazon DynamoDB: {category: cloud, aliases: [dynamodb], implies: [AWS, NoSQL]}
+  Cassandra: {category: database, aliases: [apache cassandra], implies: [NoSQL]}
+  Redis: {category: database}
+  NoSQL: {category: concept, aliases: [nosql databases, "no-sql"]}
+  Elasticsearch: {category: database, aliases: [elastic search, opensearch]}
+
+  # ---------------------------------------------------------------- warehouses / lakes
+  Amazon Redshift: {category: warehouse, aliases: [redshift, aws redshift], implies: [AWS, Data Warehousing], equivalent: [Snowflake, Google BigQuery, Azure Synapse], related: [PostgreSQL]}
+  Snowflake: {category: warehouse, implies: [Data Warehousing], equivalent: [Amazon Redshift, Google BigQuery, Azure Synapse, Databricks]}
+  Google BigQuery: {category: warehouse, aliases: [bigquery, big query], implies: [GCP, Data Warehousing], equivalent: [Snowflake, Amazon Redshift]}
+  Azure Synapse: {category: warehouse, aliases: [synapse analytics, azure synapse analytics], implies: [Azure, Data Warehousing], equivalent: [Snowflake, Amazon Redshift]}
+  Databricks: {category: processing, aliases: [azure databricks], implies: [Apache Spark], equivalent: [Snowflake]}
+  Data Warehousing: {category: concept, aliases: [data warehouse, data warehouses, data warehousing, dwh, edw, enterprise data warehouse]}
+  Data Lake: {category: concept, aliases: [data lakes, lakehouse, data lakehouse, delta lake]}
+  Data Modeling: {category: concept, aliases: [data modelling, dimensional modeling, dimensional modelling, star schema, snowflake schema, kimball, data vault]}
+
+  # ---------------------------------------------------------------- AWS
+  AWS: {category: cloud, aliases: [amazon web services, aws cloud], equivalent: [Azure, GCP]}
+  AWS Lambda: {category: cloud, aliases: [lambda functions, "aws lambda", "lambda function", serverless functions], implies: [AWS, Serverless], equivalent: [Azure Functions, Google Cloud Functions]}
+  AWS Step Functions: {category: orchestration, aliases: [step functions, step function, "aws step function", sfn], implies: [AWS, Workflow Orchestration], related: [Apache Airflow, Azure Data Factory]}
+  Amazon S3: {category: cloud, aliases: [s3, aws s3, "s3 buckets"], implies: [AWS], equivalent: [Azure Blob Storage, Google Cloud Storage]}
+  AWS Glue: {category: processing, aliases: [glue jobs, glue catalog, "aws glue"], implies: [AWS, ETL], related: [AWS Lambda, Apache Spark, Azure Data Factory]}
+  Amazon Athena: {category: cloud, aliases: [athena], implies: [AWS, SQL]}
+  Amazon EMR: {category: processing, aliases: [emr, elastic mapreduce], implies: [AWS, Apache Spark]}
+  Amazon Kinesis: {category: streaming, aliases: [kinesis, kinesis data streams, firehose], implies: [AWS, Data Streaming], equivalent: [Apache Kafka]}
+  Amazon EC2: {category: cloud, aliases: [ec2], implies: [AWS]}
+  Amazon CloudWatch: {category: cloud, aliases: [cloudwatch], implies: [AWS, Monitoring]}
+  Amazon SQS: {category: cloud, aliases: [sqs], implies: [AWS]}
+  Amazon SNS: {category: cloud, aliases: [sns], implies: [AWS]}
+  AWS IAM: {category: cloud, aliases: [iam], implies: [AWS]}
+  AWS DMS: {category: cloud, aliases: [database migration service, "aws dms"], implies: [AWS]}
+  Serverless: {category: concept, aliases: [serverless architecture, serverless computing]}
+
+  # ---------------------------------------------------------------- Azure / GCP
+  Azure: {category: cloud, aliases: [microsoft azure, azure cloud], equivalent: [AWS, GCP]}
+  Azure Data Factory: {category: orchestration, aliases: [adf, data factory], implies: [Azure, ETL], equivalent: [SSIS], related: [AWS Step Functions, AWS Glue, Apache Airflow]}
+  Azure Functions: {category: cloud, implies: [Azure, Serverless], equivalent: [AWS Lambda]}
+  Azure Blob Storage: {category: cloud, aliases: [blob storage, adls, azure data lake storage, adls gen2], implies: [Azure], equivalent: [Amazon S3]}
+  Microsoft Fabric: {category: warehouse, aliases: [ms fabric], implies: [Azure]}
+  GCP: {category: cloud, aliases: [google cloud, google cloud platform], equivalent: [AWS, Azure]}
+  Google Cloud Storage: {category: cloud, aliases: [gcs], implies: [GCP], equivalent: [Amazon S3]}
+  Google Cloud Functions: {category: cloud, aliases: [cloud functions], implies: [GCP, Serverless], equivalent: [AWS Lambda]}
+  Dataflow: {category: processing, aliases: [google dataflow, apache beam], implies: [GCP]}
+
+  # ---------------------------------------------------------------- processing / orchestration
+  ETL: {category: concept, aliases: [elt, "etl/elt", "elt/etl", etl pipelines, elt pipelines, etl processes, extract transform load, "extract, transform, load", data pipelines, data pipeline, pipeline development]}
+  Apache Spark: {category: processing, aliases: [spark, pyspark, spark sql, sparksql], related: [Python, SQL, pandas]}
+  Apache Hadoop: {category: processing, aliases: [hadoop, hdfs, mapreduce, hive, apache hive], related: [Apache Spark]}
+  Apache Airflow: {category: orchestration, aliases: [airflow, mwaa, cloud composer], implies: [Workflow Orchestration], related: [AWS Step Functions, Azure Data Factory, Dagster, Prefect]}
+  Dagster: {category: orchestration, implies: [Workflow Orchestration], related: [Apache Airflow]}
+  Prefect: {category: orchestration, implies: [Workflow Orchestration], related: [Apache Airflow]}
+  Workflow Orchestration: {category: concept, aliases: [workflow orchestration, pipeline orchestration, job scheduling, workflow automation]}
+  dbt: {category: processing, aliases: [data build tool, dbt core, dbt cloud], related: [SQL]}
+  SSIS: {category: processing, aliases: [sql server integration services], implies: [ETL], equivalent: [Azure Data Factory, Informatica, Talend]}
+  SSRS: {category: bi, aliases: [sql server reporting services]}
+  SSAS: {category: bi, aliases: [sql server analysis services]}
+  Informatica: {category: processing, aliases: [informatica powercenter, iics], implies: [ETL], equivalent: [SSIS, Talend]}
+  Talend: {category: processing, implies: [ETL], equivalent: [SSIS, Informatica]}
+  pandas: {category: language, aliases: [pandas library], related: [Apache Spark]}
+  NumPy: {category: language, aliases: [numpy]}
+  Apache Kafka: {category: streaming, aliases: [kafka, confluent kafka, kafka streams], implies: [Data Streaming], equivalent: [Amazon Kinesis]}
+  Data Streaming: {category: concept, aliases: [stream processing, real-time data, real time data, streaming data, event streaming]}
+  Change Data Capture: {category: concept, aliases: [cdc, debezium]}
+  Incremental Loading: {category: concept, aliases: [incremental load, incremental loads, incremental processing, incremental data processing, delta loads, upserts, upsert, merge logic]}
+
+  # ---------------------------------------------------------------- APIs / integration
+  REST APIs: {category: integration, aliases: [rest api, restful api, restful apis, api integration, api integrations, "web apis", "api ingestion"]}
+  RETS: {category: integration, aliases: [rets feeds, rets feed, real estate transaction standard]}
+  JSON: {category: integration}
+  XML: {category: integration}
+  Data Integration: {category: concept, aliases: [data ingestion, ingestion pipelines, data synchronization, data synchronisation, data sync]}
+
+  # ---------------------------------------------------------------- quality / ops
+  Data Quality: {category: concept, aliases: [data validation, data quality checks, data cleansing, data cleaning, great expectations, data integrity]}
+  Data Governance: {category: concept, aliases: [data lineage, data catalog, data catalogue, metadata management]}
+  Performance Tuning: {category: concept, aliases: [query optimization, query optimisation, query tuning, performance optimization, sql optimization, index tuning, pipeline optimization]}
+  Monitoring: {category: concept, aliases: [observability, alerting, logging and monitoring]}
+  Git: {category: devops, aliases: [github, gitlab, bitbucket, version control]}
+  CI/CD: {category: devops, aliases: [ci cd, "ci/cd pipelines", continuous integration, github actions, jenkins, gitlab ci]}
+  Docker: {category: devops, aliases: [containers, containerization, containerisation]}
+  Kubernetes: {category: devops, aliases: [k8s, eks, aks, gke]}
+  Terraform: {category: devops, aliases: [infrastructure as code, iac, cloudformation, aws cdk], implies: []}
+  Linux: {category: devops, aliases: [unix]}
+
+  # ---------------------------------------------------------------- BI / analytics
+  Power BI: {category: bi, aliases: [powerbi, power-bi, dax, power query], equivalent: [Tableau, Looker]}
+  Tableau: {category: bi, equivalent: [Power BI, Looker]}
+  Looker: {category: bi, aliases: [looker studio, lookml], equivalent: [Power BI, Tableau]}
+  Excel: {category: bi, aliases: [ms excel, microsoft excel, advanced excel]}
+  Data Analytics: {category: concept, aliases: [data analysis, data analytics]}
+
+  # ---------------------------------------------------------------- ML (adjacent; usually not a target)
+  Machine Learning: {category: ml, aliases: [ml, machine-learning, scikit-learn, sklearn], context_only: false}
+  Deep Learning: {category: ml, aliases: [tensorflow, pytorch, neural networks]}
+
+  # ---------------------------------------------------------------- practices
+  Agile: {category: practice, aliases: [scrum, kanban, jira]}
