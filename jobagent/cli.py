@@ -462,8 +462,13 @@ def cmd_dashboard(settings: Settings, args) -> int:
     if not shutil.which("streamlit"):
         print("Streamlit is not installed: pip install 'jobagent[dashboard]'  (or pip install streamlit plotly)")
         return 2
-    return subprocess.call(["streamlit", "run", str(app), "--server.headless", "true",
-                            "--browser.gatherUsageStats", "false"])
+    import os
+    env = dict(os.environ)
+    if args.config:
+        env["JOBAGENT_CONFIG"] = str(Path(args.config).resolve())
+    # Bound to localhost only: the dashboard shows private data.
+    return subprocess.call(["streamlit", "run", str(app), "--server.headless", "true", "--server.address", "localhost",
+                            "--browser.gatherUsageStats", "false"], env=env)
 
 
 def cmd_purge(settings: Settings, args) -> int:

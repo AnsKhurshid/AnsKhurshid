@@ -124,14 +124,22 @@ def score_skills(req: JobRequirements, cand: CandidateView, taxonomy: Taxonomy):
 
 
 def score_responsibilities(req: JobRequirements, description: str, cand: CandidateView, taxonomy: Taxonomy):
-    lines = req.responsibilities or [l for l in description.splitlines() if len(l.strip()) > 30][:20]
-    scored, evidence = [], []
+    from jobagent.matching.requirements import split_description
+    if req.responsibilities:
+        lines = req.responsibilities
+    else:
+        # Requirement/preferred lines are already scored under skills; don't count them twice.
+        sec = split_description(description)
+        lines = [l for k in ("intro", "responsibilities", "other") for l in sec.get(k, []) if len(l) > 30][:20]
+    scored, evidence, seen = [], [], set()
     for ln in lines:
         concepts = [c for c, pat in CONCEPTS.items() if re.search(pat, ln, re.I)]
         skills = list(taxonomy.find(ln))
         items = len(concepts) + len(skills)
-        if not items:
+        signature = frozenset(concepts + skills)
+        if not items or signature in seen:   # repeated keywords count once
             continue
+        seen.add(signature)
         credit = sum(cand.concepts.get(c, 0.0) for c in concepts)
         credit += sum(LEVEL_CREDIT.get(cand.levels.get(s, ""), 0.0) if cand.levels.get(s) else 0.0 for s in skills)
         frac = credit / items
