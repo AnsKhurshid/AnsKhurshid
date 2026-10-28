@@ -6,6 +6,8 @@ jobs, starting with LinkedIn and prioritising Pakistan (on-site, hybrid and remo
 What it will **never** do: apply to jobs, message recruiters, upload your resume anywhere, or claim experience you
 don't have. You review and send every application yourself.
 
+> **New here? Read the [User Guide](USER_GUIDE.md)** for step-by-step setup and the weekly routine.
+>
 > The `docs/` folder holds unrelated database documentation and is not part of the application.
 
 ---
