@@ -28,9 +28,9 @@ Legend: [x] done and verified by tests or a documented manual check · [ ] remai
 - [x] Streamlit dashboard: KPIs, filters, charts, sortable table, job detail, resume download/generation, decision buttons, exports (manually verified with screenshots)
 
 ## Phase 5: Testing & usability
-- [x] 68 automated tests (unit, integration, rerun, matching, factuality, errors, CLI end-to-end)
+- [x] 69 automated tests (unit, integration, rerun, matching, factuality, errors, CLI end-to-end)
 - [x] README (install, config, architecture, usage, troubleshooting, limitations)
-- [~] **End-to-end validation with your real master resume** (waiting for the file)
+- [x] End-to-end validation with the real master resume (profile extracted, reviewed, approved; 6 tailored resumes pass validation against synthetic jobs)
 - [~] Tune taxonomy, weights and thresholds after reviewing results on real jobs
 
 ## Future (not started)

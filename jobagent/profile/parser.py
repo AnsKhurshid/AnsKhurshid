@@ -84,12 +84,25 @@ def _pdf_lines(path: Path) -> list[Line]:
                 else:
                     t = raw.strip()
                     lines.append(Line(text=t, heading_hint=t.isupper() and len(t) < 40))
-    # Join bullet continuation lines (PDF wraps long bullets onto new lines).
+    return merge_wrapped_bullets(lines)
+
+
+def merge_wrapped_bullets(lines: list[Line]) -> list[Line]:
+    """Join bullet continuation lines (PDFs wrap long bullets onto new lines).
+
+    A wrapped line may start with a capital ("...multiple MLS / API sources with..."), so the main
+    signal is that the previous bullet has not finished its sentence. Lines that look like a section
+    heading or a dated role header are never joined.
+    """
+    from jobagent.profile.extractor import DATE_RANGE_RE, _section_of
     merged: list[Line] = []
     for ln in lines:
-        if (merged and merged[-1].bullet and not ln.bullet and not ln.heading_hint
-                and ln.text[:1].islower()):
-            merged[-1].text += " " + ln.text
+        prev = merged[-1] if merged else None
+        continues = (prev is not None and prev.bullet and not ln.bullet and not ln.heading_hint
+                     and _section_of(ln) is None and not DATE_RANGE_RE.search(ln.text)
+                     and (ln.text[:1].islower() or not prev.text.rstrip().endswith((".", "!", "?", ":"))))
+        if continues:
+            prev.text += " " + ln.text
         else:
             merged.append(ln)
     return merged

@@ -254,6 +254,16 @@ def extract_profile(lines: list[Line], taxonomy: Taxonomy, resume_sha: str | Non
         rng = next((m for b in block if (m := DATE_RANGE_RE.search(b))), None)
         parts = [p.strip(" |,–—-()") for b in block for p in re.split(r"\s*[|–—]\s*|\s+-\s+", DATE_RANGE_RE.sub("", b))]
         parts = [p for p in parts if p and not re.fullmatch(r"(19|20)\d{2}", p)]
+        # "BS in Computer Science, University of X" -> split degree and institution at the comma.
+        split_parts = []
+        for part in parts:
+            pieces = [x.strip() for x in part.split(",")]
+            if len(pieces) > 1 and DEGREE_WORDS.search(pieces[0]) and re.search(
+                    r"\b(university|college|institute|school|academy)\b", ", ".join(pieces[1:]), re.I):
+                split_parts += [pieces[0], ", ".join(pieces[1:])]
+            else:
+                split_parts.append(part)
+        parts = split_parts
         degree = next((p for p in parts if DEGREE_WORDS.search(p)), None)
         inst = next((p for p in parts if p != degree and re.search(
             r"\b(university|college|institute|school|academy|uet|nust|fast|lums|comsats|pucit)\b", p, re.I)), None)
@@ -290,7 +300,9 @@ def extract_profile(lines: list[Line], taxonomy: Taxonomy, resume_sha: str | Non
     proj_other = [b for p in projects if p.kind == "portfolio" for b in p.bullets + [p.name, p.description or ""]]
     learn = [b for p in projects if p.kind == "learning" for b in p.bullets + [p.name, p.description or ""]]
     learn += [c.name for c in certifications] + [l.text for l in sections.get("education", [])]
-    listed_lines = [l.text for l in sections.get("skills", [])] + summary_lines
+    # "Data Integration Tools: SSIS, Pentaho" -> the label before ':' is a category name, not a skill.
+    listed_lines = [l.text.split(":", 1)[1] if ":" in l.text[:45] else l.text
+                    for l in sections.get("skills", [])] + summary_lines
 
     prof = scan(exp_lines + proj_prof)
     proj = scan(proj_other)
@@ -326,6 +338,8 @@ def extract_profile(lines: list[Line], taxonomy: Taxonomy, resume_sha: str | Non
         achievements=achievements, unverified=unverified,
         source_resume_sha256=resume_sha, extracted_at=datetime.now(timezone.utc),
     )
+    if not profile.headline and experience and "UNKNOWN" not in experience[0].title:
+        profile.headline = experience[0].title   # most recent title, exactly as on the resume
     profile.total_experience_years = total_experience_years(experience)
     if profile.total_experience_years is None:
         unverified.append("Could not compute total experience from dates; set total_experience_years.")

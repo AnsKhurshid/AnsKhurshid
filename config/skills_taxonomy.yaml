@@ -85,6 +85,7 @@ skills:
   SSIS: {category: processing, aliases: [sql server integration services], implies: [ETL], equivalent: [Azure Data Factory, Informatica, Talend]}
   SSRS: {category: bi, aliases: [sql server reporting services]}
   SSAS: {category: bi, aliases: [sql server analysis services]}
+  Pentaho: {category: processing, aliases: [pentaho data integration, pentaho pdi, kettle], implies: [ETL], equivalent: [SSIS, Informatica, Talend]}
   Informatica: {category: processing, aliases: [informatica powercenter, iics], implies: [ETL], equivalent: [SSIS, Talend]}
   Talend: {category: processing, implies: [ETL], equivalent: [SSIS, Informatica]}
   pandas: {category: language, aliases: [pandas library], related: [Apache Spark]}
@@ -95,7 +96,8 @@ skills:
   Incremental Loading: {category: concept, aliases: [incremental load, incremental loads, incremental processing, incremental data processing, delta loads, upserts, upsert, merge logic]}
 
   # ---------------------------------------------------------------- APIs / integration
-  REST APIs: {category: integration, aliases: [rest api, restful api, restful apis, api integration, api integrations, "web apis", "api ingestion"]}
+  OAuth: {category: integration, aliases: [oauth2, "oauth 2.0", oauth flows]}
+  REST APIs: {category: integration, aliases: [rest api, restful api, restful apis, api integration, api integrations, "web apis", "api ingestion", api sources, api source, third-party apis]}
   RETS: {category: integration, aliases: [rets feeds, rets feed, real estate transaction standard]}
   JSON: {category: integration}
   XML: {category: integration}
@@ -104,7 +106,7 @@ skills:
   # ---------------------------------------------------------------- quality / ops
   Data Quality: {category: concept, aliases: [data validation, data quality checks, data cleansing, data cleaning, great expectations, data integrity]}
   Data Governance: {category: concept, aliases: [data lineage, data catalog, data catalogue, metadata management]}
-  Performance Tuning: {category: concept, aliases: [query optimization, query optimisation, query tuning, performance optimization, sql optimization, index tuning, pipeline optimization]}
+  Performance Tuning: {category: concept, aliases: [query optimization, query optimisation, query tuning, performance optimization, sql optimization, index tuning, pipeline optimization, query plan analysis, execution plans, execution tuning, indexing]}
   Monitoring: {category: concept, aliases: [observability, alerting, logging and monitoring]}
   Git: {category: devops, aliases: [github, gitlab, bitbucket, version control]}
   CI/CD: {category: devops, aliases: [ci cd, "ci/cd pipelines", continuous integration, github actions, jenkins, gitlab ci]}

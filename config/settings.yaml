@@ -3,7 +3,7 @@
 # Relative paths resolve against the project root.
 
 profile:
-  master_resume_path: data/resume/master_resume.docx   # .docx or .pdf; never modified
+  master_resume_path: data/resume/master_resume.pdf   # .docx or .pdf; never modified
   candidate_profile_path: data/profile/candidate_profile.yaml  # extracted, user-reviewed profile
 
 search:

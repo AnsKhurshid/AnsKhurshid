@@ -209,7 +209,7 @@ python-docx, pandas + openpyxl (reports); optional streamlit + plotly (dashboard
 python -m pytest -q
 ```
 
-68 tests run on synthetic fixtures only (a fictional resume and fictional jobs; no network). They cover taxonomy,
+69 tests run on synthetic fixtures only (a fictional resume and fictional jobs; no network). They cover taxonomy,
 parsing, deduplication and reruns, URL canonicalisation, the robots/LinkedIn fetch refusal, scoring and hard
 constraints, AI evidence verification and caching (with a fake provider), retry tracking, resume factuality
 (including adversarial tampering and AI rewrites that add facts), reports, and a full CLI end-to-end run.

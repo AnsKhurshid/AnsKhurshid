@@ -58,6 +58,8 @@ class Tailor:
         prof = {s.name for s in self.p.skills if s.level == "professional"}
         relevant = sorted((s for s in prof if weights.get(s, 0) >= 0.5 and self.t.category(s) != "concept"),
                           key=lambda s: (-weights.get(s, 0), s))[:6]
+        # Drop broad skills already implied by a more specific one ("AWS" when "AWS Lambda" is listed).
+        relevant = [s for s in relevant if not any(s in self.t.implied_closure({o}) - {o} for o in relevant if o != s)]
         if len(relevant) < 3:
             relevant += [s for s in sorted(prof) if s not in relevant and self.t.category(s) != "concept"][:6 - len(relevant)]
         evidence_concepts = []
@@ -67,8 +69,8 @@ class Tailor:
             if c in concepts and re.search(CONCEPTS[c], prof_text, re.I):
                 evidence_concepts.append(c)
         phrases = {
-            "building pipelines": "building and maintaining production ETL/ELT pipelines",
-            "API/data ingestion": "ingesting data from APIs and external feeds",
+            "building pipelines": "building and maintaining production ETL pipelines",
+            "API/data ingestion": "ingesting data from external APIs",
             "transformation": "transforming data through staging layers",
             "data synchronisation": "incremental loading and reliable data synchronisation",
             "data quality": "resolving data-quality issues",

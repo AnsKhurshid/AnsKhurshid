@@ -79,3 +79,30 @@ def test_pdf_resume_parses_like_docx(tmp_path, taxonomy, master_resume):
     prof = extract_profile(read_resume(tmp_path / "master.pdf"), taxonomy)
     assert len(prof.experience) == 3
     assert {s.name for s in prof.skills if s.level == "professional"} >= {"Python", "SQL", "AWS Lambda"}
+
+
+def test_wrapped_pdf_bullets_rejoin_even_when_capitalised(taxonomy):
+    from jobagent.profile.extractor import extract_profile
+    from jobagent.profile.parser import Line, merge_wrapped_bullets
+    raw = [Line("Jane Example"), Line("jane@example.com | +92 300 0000000"), Line("Experience"),
+           Line("Data Engineer, Example Co, Lahore June 2024 – Present"),
+           Line("Migrated pipelines to AWS Lambda, integrating multiple partner", bullet=True),
+           Line("API sources with schema mapping."),
+           Line("Tuned SQL queries through indexing and query plan analysis, reducing", bullet=True),
+           Line("runtime."),
+           Line("Intern, Other Co, Lahore July 2023 – Sep 2023"),
+           Line("Built SSIS packages.", bullet=True),
+           Line("Education"), Line("BS in Computer Science, University of Example Feb 2020 – March 2024"),
+           Line("Skills"), Line("Data Integration Tools: SSIS, Pentaho")]
+    lines = merge_wrapped_bullets(raw)
+    prof = extract_profile(lines, taxonomy)
+    assert [(e.title, e.employer) for e in prof.experience] == [("Data Engineer", "Example Co"), ("Intern", "Other Co")]
+    assert prof.experience[0].bullets[0].endswith("API sources with schema mapping.")
+    assert len(prof.experience[0].bullets) == 2
+    assert prof.education[0].degree == "BS in Computer Science"
+    assert prof.education[0].institution == "University of Example"
+    assert prof.headline == "Data Engineer"
+    levels = {s.name: s.level for s in prof.skills}
+    assert levels["Performance Tuning"] == "professional"   # "query plan analysis" is evidence
+    assert levels["Pentaho"] == "listed"
+    assert "Data Integration" not in levels                 # category label, not a skill
