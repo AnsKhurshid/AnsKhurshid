@@ -1,0 +1,95 @@
+# Job-search agent configuration.
+# Secrets (API keys) do NOT belong here; put them in .env (see .env.example).
+# Relative paths resolve against the project root.
+
+profile:
+  master_resume_path: data/resume/master_resume.pdf   # .docx or .pdf; never modified
+  candidate_profile_path: data/profile/candidate_profile.yaml  # extracted, user-reviewed profile
+
+search:
+  preferred_titles:          # priority order: earlier = stronger career alignment
+    - Data Engineer
+    - AWS Data Engineer
+    - ETL Developer
+    - ETL Engineer
+    - Python Data Engineer
+    - SQL Data Engineer
+    - Analytics Engineer
+    - Data Integration Engineer
+  primary_country: Pakistan
+  preferred_locations: [Lahore, Karachi, Islamabad, Rawalpindi, Faisalabad, Multan, Peshawar]
+  work_arrangements: [on-site, hybrid, remote]
+  include_international_remote: false   # only after local roles are processed
+  posted_within_days: 14                # used for generated search links
+  min_experience_years: 0
+  max_experience_years: 5               # roles requiring more than this get a seniority penalty
+  candidate_experience_years: null      # null = derive from the reviewed profile
+  preferred_industries: []
+  excluded_industries: []
+  excluded_title_keywords: [intern, internship, principal, director, head of, vp ]
+  frequency: weekly                     # informational until scheduling is added
+  max_jobs_per_run: 200
+
+sources:
+  enabled: [linkedin, manual]
+  linkedin:
+    geo_id_pakistan: "101022442"
+    inbox_dir: data/inbox/linkedin      # drop saved job pages (.html), url lists (.txt) here
+  manual:
+    inbox_dir: data/inbox/manual        # .csv / .json / .txt job files
+  url_fetch:
+    enabled: true                       # only fetches URLs whose robots.txt allows it
+    user_agent: "jobagent-personal/0.1 (+local personal use)"
+    min_interval_seconds: 5
+    timeout_seconds: 20
+    max_retries: 3
+
+matching:
+  min_match_score: 65                   # shortlist threshold
+  weights:                              # must sum to 100
+    skills: 30
+    responsibilities: 25
+    seniority: 15
+    role_alignment: 15
+    location: 10
+    domain: 5
+  categories:                           # lower bounds, inclusive
+    strong: 80
+    potential: 65
+    stretch: 50
+  use_ai: true                          # ignored when no provider/key is configured
+  # Roles outside your direction (analyst, scientist, generic SWE) are scaled down so shared keywords
+  # like SQL/Python cannot push them up the list. Factor = 0.5 + 0.5 * (role_alignment / threshold).
+  # Set to 0 to disable.
+  off_target_role_threshold: 0.6
+  candidate_domains: [real estate, proptech]
+
+resume:
+  output_dir: data/resumes
+  generate_pdf: true                    # requires LibreOffice (soffice) on PATH
+  ai_rewrite_bullets: false             # deterministic tailoring by default; AI rewrite is validated
+  max_bullets_per_role: 6
+
+reporting:
+  output_dir: data/reports
+  min_sample_for_trends: 10             # below this, market insights are labelled "small sample"
+
+ai:
+  # none = fully local/deterministic. anthropic = optional AI analysis (requires ANTHROPIC_API_KEY in .env).
+  # When enabled, the job description and a contact-free copy of your profile are sent to the provider.
+  provider: none                        # none | anthropic
+  model: claude-opus-5-5
+  effort: medium                        # low | medium | high | xhigh | max (lower = cheaper)
+  refusal_fallback: true
+  max_tokens: 16000
+  timeout_seconds: 120
+  max_retries: 2
+  input_cost_per_mtok: 4.0              # USD, used only for cost estimates
+  output_cost_per_mtok: 20.0
+
+storage:
+  db_path: data/jobagent.db
+
+logging:
+  dir: data/logs
+  level: INFO

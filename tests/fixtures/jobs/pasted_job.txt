@@ -1,0 +1,18 @@
+Title: Python Data Engineer
+Company: Example Health Tech
+Location: Lahore, Pakistan
+Work arrangement: On-site
+URL: https://www.linkedin.com/jobs/view/python-data-engineer-at-example-health-3666666666/?trk=abc
+Posted: 2026-10-22
+
+We are looking for a Python Data Engineer.
+
+Responsibilities:
+- Develop Python ETL jobs that ingest data from REST APIs into PostgreSQL
+- Write SQL transformations and maintain staging layers
+- Automate workflows and improve pipeline performance
+
+Requirements:
+- 2+ years of professional Python development for data pipelines
+- Strong SQL and PostgreSQL
+- Experience with AWS Lambda is a plus

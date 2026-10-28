@@ -1,0 +1,15 @@
+# Private / generated data — never commit
+data/
+*.db
+*.db-journal
+.env
+config/candidate_profile.yaml
+logs/
+
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+build/
+dist/
+.venv/
